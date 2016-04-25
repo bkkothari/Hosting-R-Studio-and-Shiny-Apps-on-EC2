@@ -1,0 +1,104 @@
+---
+title: "Hosting R and Shiny on EC2 Server "
+author: "Bhushan Kothari"
+date: "April 18, 2016"
+output: slidy_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## Introduction
+
+Purpose of this document is to enable you to quickly host Shiny applications on EC2 server.
+
+[Shiny](http://shiny.rstudio.com/) is a web application framework for R. It is a great package that can be used to create beautiful interactive dashboards.
+
+- No Html, CSS or JavaScript knowledge required.
+- Shiny can be run on local machine as well as server so dashboards can be shared with others.
+
+
+[EC2](https://aws.amazon.com/ec2/?sc_channel=PS&sc_campaign=acquisition_US&sc_publisher=google&sc_medium=ec2_b&sc_content=ec2_e&sc_detail=ec2&sc_category=ec2&sc_segment=73821516642&sc_matchtype=e&sc_country=US&s_kwcid=AL!4422!3!73821516642!e!!g!!ec2&ef_id=VxkYWQAAAUzXxh5J:20160421192250:s) stands for Elastic Compute Cloud. Amazon provides users option to rent machines on their cloud infrastructure.
+
+- Run servers and host applications on them.
+
+
+
+## Create and Launch EC2 Instance
+
+- Create an [AWS](https://aws.amazon.com/) account and login to the console.
+
+- Click on Compute > EC2 (near the top left of the screen) and click the **Launch Instance** button in the Create Instance section of the page.
+
+- We are now in the AMI (Amazon Machine Image) interface. AMI defines which operating system is installed on your EC2 instance. Select Amazon Linux AMI 2016.03.0 (HVM)
+![Select AMI](C:\Users\Bhushan\Dropbox\R_Projects\RShinyonEC2\Images\1.SelectAMI.png)
+
+- Choose an Instance type
+    + We will go ahead with t2.micro instance since its available free of Cost and suffices our needs as of now. Refer [AWS](http://aws.amazon.com/de/ec2/instance-types/) page for more details on instance types.
+![Select Instance](C:\Users\Bhushan\Dropbox\R_Projects\RShinyonEC2\Images\2.SelectInstance.png)
+
+##Configure Instance Details
+- You can enter commands to install RStudio and Shiny Server here before starting the launch or after the instance has been launched. 
+    ![Configure Instance](C:\Users\Bhushan\Dropbox\R_Projects\RShinyonEC2\Images\3.ConfigureInstance.png)
+- Code for installing Rstudio and Shiny is as follows.
+```{r, eval=FALSE, echo=TRUE}
+#!/bin/bash
+#install R
+yum install -y R
+#install RStudio-Server
+wget https://download2.rstudio.org/rstudio-server-rhel-0.99.465-x86_64.rpm
+yum install -y --nogpgcheck rstudio-server-rhel-0.99.465-x86_64.rpm
+#install shiny and shiny-server
+R -e "install.packages('shiny', repos='http://cran.rstudio.com/')"
+wget https://download3.rstudio.org/centos5.9/x86_64/shiny-server-1.4.0.718-rh5-x86_64.rpm
+yum install -y --nogpgcheck shiny-server-1.4.0.718-rh5-x86_64.rpm
+#add user(s)
+useradd username
+echo username:password | chpasswd
+
+```
+- You can change the username and password details for your RStudio account.
+- Click on **Next: Add Storage**
+- Click on **Next: Tag Instance**
+- Click on **Next: Configure Security Group** 
+
+## Configuring Security Group
+- By default it will only have a single rule to accept SSH connection. However since you would be accessing RStudio and Shiny Server you need to open up port 8787 for RStudio Server and port 3838 for Shiny Server. 
+    ![Configure Security Group](C:\Users\Bhushan\Dropbox\R_Projects\RShinyonEC2\Images\6.ConfigureSecurityGrp.png)
+    
+- Review and Launch the instance
+    ![Configure Security Group](C:\Users\Bhushan\Dropbox\R_Projects\RShinyonEC2\Images\7.Launch.png)
+
+## Key-Pair
+- To connect to the machine you need to have a Registered Key Pair. To Launch the instance select Generate New Key and download the .pem file. Click on **Launch Instance** 
+    ![KeyPair](C:\Users\Bhushan\Dropbox\R_Projects\RShinyonEC2\Images\KeyPair.png)
+- Once you download the new Key or .pem file, you need to generate the .ppk file using Putty KeyGen.
+
+- Refer this detailed documentation on [Connecting to  Instance](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AccessingInstances.html) by AWS.
+
+    
+    
+## Connecting to RStudio
+- Once you have connected to your EC2 instance, execute the following command since few packages will need installed Linux packages.
+```{r, eval=FALSE, echo=TRUE}
+sudo yum install curl-devel
+```
+
+- You can access the RStudio on following address. **http://public DNS:8787**
+```{r, eval=FALSE, echo=TRUE}
+http://ec2-YOUR-IP.REGION.compute.amazonaws.com:8787
+```
+
+## Setting up Shiny Server
+- You have already installed the Shiny Server. However to use it you need to run following commands.
+```{r, eval=FALSE, echo=TRUE}
+sudo /opt/shiny-server/bin/deploy-example user-dirs
+mkdir ~/ShinyApps
+```
+- Navigate inside the ShinyApps folder you created and fetch the files(*ui.R*, *server.R*) from github or online source or save files from RStudio in this folder.
+
+- Your ShinyApps can be found at following address.
+**http:// ec2-YOUR-IP.REGION.compute.amazonaws.com:3838/<your_username>/MyApp**
+    ![Shiny App](C:\Users\Bhushan\Dropbox\R_Projects\RShinyonEC2\Images\ShinyApp.png)
+    
